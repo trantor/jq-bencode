@@ -15,18 +15,23 @@ def common_length($b):
     index(false) // $min
 ;
 
-def bytestrlength:
+# Outputs the input character length as the length of its UTF-8-encoded version in bytes
+def bytecharlength:
     utf8bytelength
 ;
 
-def strlength:
+# Outputs the input character length in UTF-8 code units
+def charlength:
     1
 ;
 
-def u16strlength:
+# Outputs the input character length in UTF-16 code units
+def u16charlength:
     if utf8bytelength > 3 then 2 else 1 end
 ;
 
+# Bencode to JSON decoder
+# The argument is a function returning the "length" of a character
 def bdecode(length_function):
 
     def string_process($mode;$ichar;length_function):
@@ -383,6 +388,8 @@ def bdecode(length_function):
     fromstream(.[0][])[]
 ;
 
+# JSON to Bencode encoder
+# The argument is a function returning the "length" of a character
 def bencode(length_function):
 
     [.] |
@@ -483,14 +490,14 @@ def bencode(length_function):
 # Implementation of Bencode where the string length is expressed as a count of UTF-16 code units.
 # So every character within the Basic Multilingual Plane requires 1 code unit
 # to encode, while every character in Supplementary planes requires 2 code units.
-def u16strbdecode: bdecode(u16strlength);
-def u16strbencode: bencode(u16strlength);
+def u16strbdecode: bdecode(u16charlength);
+def u16strbencode: bencode(u16charlength);
 
 # Implementation of Bencode where the string length is expressed as a count of UTF-8 code units.
-def strbdecode: bdecode(strlength);
-def strbencode: bencode(strlength);
+def strbdecode: bdecode(charlength);
+def strbencode: bencode(charlength);
 
 # Implementation of Bencode (the most common one) where the string length is expressed as a byte count.
-def bdecode: bdecode(bytestrlength);
-def bencode: bencode(bytestrlength);
+def bdecode: bdecode(bytecharlength);
+def bencode: bencode(bytecharlength);
 
