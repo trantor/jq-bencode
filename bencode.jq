@@ -199,56 +199,51 @@ def bdecode(length_function):
                     del(.[1][1][-1]) |
                     .[1][1] as $stack |
                     ( $stack | length ) as $stack_length |
-                    if $stack_length > 0 then (
 
-                        # If a list or dictionary closed as empty, add it as value for the previous path
-                        if $old_stack_length == $stack_length and $old_stack_length < $prev_stack_length and $prev_value == null then (
-                            if $last_two[-1] == "array" then (
-                                .[0][-1][1] = []
-                            ) else (
-                                .[0][-1][1] = {}
-                            ) end
+                    # If a list or dictionary closed as empty, add it as value for the previous path
+                    if $old_stack_length == $stack_length and $old_stack_length < $prev_stack_length and $prev_value == null then (
+                        if $last_two[-1] == "array" then (
+                            .[0][-1][1] = []
                         ) else (
-                            .
-                        ) end |
-
-                        # Add intermediate paths to continue
-                        # E.g. if the last element was [[0,"a"],2] and the dictionary ended, add [[0,"a"]]
-                        .[0] += [
-                                # Calculate the number of intermediate paths needed
-                                [
-                                    range(
-                                        # The previous iteration was the end of another list/dictionary or the start of one
-                                        if ( $prev_value == null ) then (
-                                            $prev_path_length - 1
-                                        # The previous element had a scalar leaf value
-                                        ) else (
-                                            $prev_path_length
-                                        ) end;
-
-                                        # E.g. If the last element was [[0,2,"a","b",0],2]
-                                        # the stack would contain ["array","array","dictionary","dictionary","array"]    
-                                        # Closing the array would also mean removing the dictionary key from the intermediate paths, hence
-                                        # [[0,2,"a","b",0]],[[0,2,"a","b"]] added at the end of this step
-                                        if (($last_two|IN(["dictionary","array"],["dictionary","dictionary"])) and ($stack_length> 1)) then (
-                                            $stack_length - 2
-                                        # Not "closing" a key-value pair
-                                        ) else (
-                                            $stack_length - 1
-                                        ) end;
-
-                                        -1
-                                    )
-                                ] |
-                                # Create the list of intermediate paths in decreasing length
-                                map(
-                                    [ $prev_path[0:.] ]
-                                )[]
-                        ]
-
+                            .[0][-1][1] = {}
+                        ) end
                     ) else (
-                    .
-                    ) end
+                        .
+                    ) end |
+
+                    # Add intermediate paths to continue
+                    # E.g. if the last element was [[0,"a"],2] and the dictionary ended, add [[0,"a"]]
+                    .[0] += [
+                            # Calculate the number of intermediate paths needed
+                            [
+                                range(
+                                    # The previous iteration was the end of another list/dictionary or the start of one
+                                    if ( $prev_value == null ) then (
+                                        $prev_path_length - 1
+                                    # The previous element had a scalar leaf value
+                                    ) else (
+                                        $prev_path_length
+                                    ) end;
+
+                                    # E.g. If the last element was [[0,2,"a","b",0],2]
+                                    # the stack would contain ["array","array","dictionary","dictionary","array"]    
+                                    # Closing the array would also mean removing the dictionary key from the intermediate paths, hence
+                                    # [[0,2,"a","b",0]],[[0,2,"a","b"]] added at the end of this step
+                                    if (($last_two|IN(["dictionary","array"],["dictionary","dictionary"])) and ($stack_length> 1)) then (
+                                        $stack_length - 2
+                                    # Not "closing" a key-value pair
+                                    ) else (
+                                        $stack_length - 1
+                                    ) end;
+
+                                    -1
+                                )
+                            ] |
+                            # Create the list of intermediate paths in decreasing length
+                            map(
+                                [ $prev_path[0:.] ]
+                            )[]
+                    ]
 
                 # Start of dictionary/list/kv-pair/value
                 ) else (
