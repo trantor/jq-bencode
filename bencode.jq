@@ -479,15 +479,6 @@ def bencode(length_function):
             ) else (
                 .
             ) end |
-            if $prev_path_length <= $curr_path_length then (
-                if $current_stack[0] == "dictionary" and $comm_indices == 0 then (
-                    .[0] += "d"
-                ) else (
-                    .
-                ) end
-            ) else (
-                .
-            ) end |
 # Copy the trailing portion of the current path which differs from
 # the one of the previous iteration for further processing
             .[3] |= $item[0][$comm_indices:] |
