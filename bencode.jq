@@ -239,7 +239,11 @@ def bdecode(length_function):
                                     -1
                                 )
                             ] |
-                            # Create the list of intermediate paths in decreasing length
+                            # Creates the list of intermediate paths in decreasing length
+                            # by slicing the last element multiple times with decreasing
+                            # ranges provided by the "range" function above.
+                            # If no intermediate paths needs to be added "range" outputs
+                            # an empty list.
                             map(
                                 [ $prev_path[0:.] ]
                             )[]
@@ -387,17 +391,39 @@ def bdecode(length_function):
 # The argument is a function returning the "length" of a character
 def bencode(length_function):
 
+# Wraps within a list the input
     [.] |
+# Generates a streaming form of the wrapped input, wrapped into a list
     [tostream] |
+# Processes the streaming form list elements through "reduce", with each
+# subsequent element aliased to $item
     reduce .[] as $item (
-        ["",[[]],[]];
+# Initial reduce data structure
+        [
+            # String accumulating the Bencode-d form of the input
+            "",
+            # Data from previous iteration
+            [
+                []
+            ],
+            # Data stack from previous iteration
+            []
+            # Working container object (missing at the start here)
+        ];
+
+# Aliases for the previous iteration elements
         .[1] as $previous |
         .[1][0] as $prev_path |
         ( .[1] | length ) as $prev_length |
         ( .[1][0] | length ) as $prev_path_length |
-        .[1] |= $item |
         .[2] as $previous_stack |
         ( .[2] | length ) as $prev_stack_length |
+
+# Processes the new stream element
+        .[1] |= $item |
+# Builds the stack from the new stream element
+# (e.g. from [[0,2,"a",0,"b",0],2] build
+# ["array","array","dictionary","array","dictionary","array"] )
         .[2] |= (
                 $item[0] |
                 map(
@@ -408,20 +434,35 @@ def bencode(length_function):
                     ) end
                 )
             ) |
+
+# Aliases for the current iteration elements
         .[2] as $current_stack |
         ( .[2] | length ) as $curr_stack_length |
         .[1] as $current |
         .[1][0] as $curr_path |
         ( .[1] | length ) as $curr_length |
         ( .[1][0] | length ) as $curr_path_length |
+
+# Find the index of the first different element between
+# the paths of the previous and the current stream elements
         ( $curr_path | common_length($prev_path)) as $comm_indices |
+
         if $prev_path_length > 0 and $comm_indices > 0 and $curr_length == 1 then (
-            .[0] += (("e" * ($previous_stack[$comm_indices:]|length  ))//"" )
+# Add a closing mark (i.e. "e") for each list/dictionary still open once
+# we've reached the base level of the input data
+            .[0] += (
+                (
+                    "e" * ( $previous_stack[$comm_indices:] | length  )
+                ) // ""
+            )
         ) else (
-            .[3] |= $item[0] |
             if $prev_path_length > 0 then (
                 if $comm_indices < $prev_path_length then (
-                    .[0] += (("e" * ($previous_stack[$comm_indices:]|length -1 ))//"" )
+                    .[0] += (
+                        (
+                            "e" * ( $previous_stack[$comm_indices:] | length -1  )
+                        ) // ""
+                    )
                 ) else (
                     .
                 ) end
@@ -437,39 +478,87 @@ def bencode(length_function):
             ) else (
                 .
             ) end |
+# Copy the trailing portion of the current path which differs from
+# the one of the previous iteration for further processing
             .[3] |= $item[0][$comm_indices:] |
 
-            .[0] += ( reduce .[3][] as $token (
-                ["",0];
-                .[1] += 1 |
-                if ($token|type == "number" and $token == 0) then (
-                    .[0] += "l"
-                ) elif ($token|type == "number") then (
-                .
-                ) elif ($token|type == "string") then (
-                    .[0] += (
-                        if .[1] == 1 then "" else "d" end +
-                        ($token|reduce split("")[] as $char (0; . + ($char|length_function))|tostring) + ":" + $token
-                    )
-                ) else (
-                    empty
-                ) end
-            ) |.[0] ) |
-            if $item|length == 2 then (
+# Adds any start of dictionary/list marker (i.e. "d" or "l") needed
+            .[0] += (
+                reduce .[3][] as $key (
+                    [
+                        # Bencode-d string accumulator
+                        "",
+                        # Index of the key being processed
+                        0
+                    ];
+                    if ( $key | type == "number" and $key == 0) then (
+# The key is a number and that number is 0, hence we are at the start of a list/array
+                        .[0] += "l"
+                    ) elif ($key|type == "number") then (
+# The key is a number different from 0, we are within a list/array
+                    .
+                    ) elif ($key|type == "string") then (
+# The key is a string, hence there's a dictionary
+                        .[0] += (
+                            (
+# Adds a start of dictionary marker if the key index is 0
+                                if .[1] == 0
+                                then ""
+                                else "d"
+                                end
+                            ) + (
+# Adds the dictionary key in Bencode-d form
+                                $key |
+# Computes the length of the key according to our definition of string length
+                                reduce split("")[] as $char (
+                                    0;
+                                    . + ( $char | length_function )
+                                ) |
+                                tostring
+                            ) + ":" + $key
+                        )
+                    ) else (
+# We should never reach this fork
+                        empty
+                    ) end |
+# Increase the key index counter
+                    .[1] += 1
+                ) |
+# Extracts the Bencode-d string
+                .[0]
+            ) |
+            if $item | length == 2 then (
+# We are looking at a stream leaf element (i.e. we have an actual value)
                 .[0] += (
-                    if $item[1]|type == "number" then (
-                        "i" + ($item[1]|tostring) + "e"
-                    ) elif $item[1]|type == "string" then (
-                        ($item[1]|reduce split("")[] as $char (0; . + ($char|length_function))|tostring) + ":" + $item[1]
-                    ) elif $item[1]|type == "boolean" then (
-                        if $item[1] == true then "i1e" else "i0e" end
-                    ) elif $item[1]|type == "null" then (
+# Translates values in Bencode-d forms, with a few implementation choices
+# where data types have no direct correspondance
+                    if $item[1] | type == "number" then (
+                        "i" + ( $item[1] | tostring ) + "e"
+                    ) elif $item[1] | type == "string" then (
+                        (
+                            $item[1] |
+# Computes the length of the string value according to our definition of string length
+                            reduce split("")[] as $char (
+                                0;
+                                . + ( $char | length_function )
+                            ) |
+                            tostring
+                        ) + ":" + $item[1]
+                    ) elif $item[1] | type == "boolean" then (
+# We choose to represent boolean values as "1" or "0" integer values
+                        if $item[1] == true
+                        then "i1e"
+                        else "i0e"
+                        end
+                    ) elif $item[1] | type == "null" then (
+# We choose to represent null values as empty strings
                         "0:"
-                    ) elif $item[1]|type == "array" then (
+                    ) elif $item[1] | type == "array" then (
                         "le"
-                    ) elif $item[1]|type == "object" then (
+                    ) elif $item[1] | type == "object" then (
                         "de"
                     ) else (
+# We should never reach this fork
                         ""
                     ) end
                 )
@@ -478,7 +567,8 @@ def bencode(length_function):
             ) end
         ) end
     )|
-    .[0][1:] 
+# Removes the leading "l" coming from the list wrapper at the start
+    .[0][1:]
 ;
 
 
