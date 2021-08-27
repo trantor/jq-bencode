@@ -462,7 +462,7 @@ def bencode(length_function):
 # we've reached the base level of the input data
             .[0] += (
                 (
-                    "e" * ( $previous_stack[$comm_indices:] | length  )
+                    "e" * ( $previous_stack[$comm_indices:] | length )
                 ) // ""
             )
         ) else (
@@ -501,13 +501,13 @@ def bencode(length_function):
                         # Index of the key being processed
                         0
                     ];
-                    if ( $key | type == "number" and $key == 0) then (
+                    if ( $key | type == "number" and $key == 0 ) then (
 # The key is a number and that number is 0, hence we are at the start of a list/array
                         .[0] += "l"
-                    ) elif ($key|type == "number") then (
+                    ) elif ( $key | type == "number" ) then (
 # The key is a number different from 0, we are within a list/array
                     .
-                    ) elif ($key|type == "string") then (
+                    ) elif ( $key | type == "string" ) then (
 # The key is a string, hence there's a dictionary
                         .[0] += (
                             (
