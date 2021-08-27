@@ -391,6 +391,16 @@ def bdecode(length_function):
 # The argument is a function returning the "length" of a character
 def bencode(length_function):
 
+# Function computing the length of its string argument
+# following the string length conventions of "length_function"
+    def string_length(length_function):
+        reduce split("")[] as $char (
+            0;
+            . + ( $char | length_function )
+        ) |
+        tostring
+    ;
+
 # Wraps within a list the input
     [.] |
 # Generates a streaming form of the wrapped input, wrapped into a list
@@ -510,11 +520,7 @@ def bencode(length_function):
 # Adds the dictionary key in Bencode-d form
                                 $key |
 # Computes the length of the key according to our definition of string length
-                                reduce split("")[] as $char (
-                                    0;
-                                    . + ( $char | length_function )
-                                ) |
-                                tostring
+                                string_length( length_function )
                             ) + ":" + $key
                         )
                     ) else (
@@ -538,11 +544,7 @@ def bencode(length_function):
                         (
                             $item[1] |
 # Computes the length of the string value according to our definition of string length
-                            reduce split("")[] as $char (
-                                0;
-                                . + ( $char | length_function )
-                            ) |
-                            tostring
+                            string_length( length_function )
                         ) + ":" + $item[1]
                     ) elif $item[1] | type == "boolean" then (
 # We choose to represent boolean values as "1" or "0" integer values
