@@ -515,7 +515,9 @@ def bencode(length_function):
 # The key is a string, hence there's a dictionary
                         .[0] += (
                             (
-# Adds a start of dictionary marker if the key index is 0
+# Adds a start of dictionary marker unless the key index is 0
+# (which means that a new key-value pair is being added to a
+# previously opened dictionary)
                                 if .[1] == 0
                                 then ""
                                 else "d"
