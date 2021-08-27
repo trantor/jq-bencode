@@ -63,7 +63,7 @@ def bdecode(length_function):
             ) else (
                 .[2][2] |= "value" |
                 .[2][3] |= . - ( $ichar | length_function ) |
-                .[2][4] |= . + $ichar 
+                .[2][4] |= . + $ichar
             ) end |
             if ( .[2][3] == 0 ) then (
                 if $mode != "key" then (
@@ -126,13 +126,13 @@ def bdecode(length_function):
         .[0][-1][0] as $prev_path |
         .[0][-1][1] as $prev_value |
         ( $prev_path | length ) as $prev_path_length |
-        
+
         # TL Length == 2 -> No value to process
         if (length == 2) then (
-            
+
             # .[0][0][0] == null  -> First run
             if (.[0][0][0] == null) then (
-                
+
                 # Start of list
                 if $item == "l" then (
                     [
@@ -143,7 +143,7 @@ def bdecode(length_function):
                         ],
                         [[],["array"]]
                     ]
-                
+
                 # Start of dictionary
                 ) elif $item == "d" then (
                     [
@@ -154,7 +154,7 @@ def bdecode(length_function):
                         ],
                         [[],["dictionary"]]
                     ]
-                
+
                 # Start of integer value
                 ) elif $item == "i" then (
                     [
@@ -170,7 +170,7 @@ def bdecode(length_function):
                             ""
                         ]
                     ]
-                
+
                 # Start of string value
                 ) else (
                     [
@@ -226,7 +226,7 @@ def bdecode(length_function):
                                     ) end;
 
                                     # E.g. If the last element was [[0,2,"a","b",0],2]
-                                    # the stack would contain ["array","array","dictionary","dictionary","array"]    
+                                    # the stack would contain ["array","array","dictionary","dictionary","array"]
                                     # Closing the array would also mean removing the dictionary key from the intermediate paths, hence
                                     # [[0,2,"a","b",0]],[[0,2,"a","b"]] added at the end of this step
                                     if (($last_two|IN(["dictionary","array"],["dictionary","dictionary"])) and ($stack_length> 1)) then (
@@ -254,14 +254,14 @@ def bdecode(length_function):
                         # Subsequent elements
                         #) elif ( $prev_path | length ) > ( $stack | length ) then (
                         ) else (
-                                .[0] +=  [[ 
+                                .[0] +=  [[
                                     $prev_path[ 0:($stack_length -1) ] +
                                     [ $prev_path[ -1 ] + 1 ]
                                 ]]
                         ) end
                     ) elif ($stack[-1] == "dictionary") then (
                         if ( $prev_path_length ) > ( $stack_length ) then (
-                            .[0] +=  [[ 
+                            .[0] +=  [[
                                 $prev_path[ 0:($stack_length -1) ] +
                                 [ $prev_path[ -1 ] + 1 ]
                             ]]
@@ -288,7 +288,7 @@ def bdecode(length_function):
                                 "scalar",
                                 "integer",
                                 ""
-                            ]] 
+                            ]]
                     ) else (
                         if ( $stack[-1] == "dictionary") then (
                             . +=
@@ -378,7 +378,7 @@ def bdecode(length_function):
             .[1][0] = $prev_stack
         ) else (
             .
-        ) end 
+        ) end
     ) |
     fromstream(.[0][])[]
 ;
