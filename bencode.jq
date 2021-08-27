@@ -200,7 +200,7 @@ def bdecode(length_function):
                     .[1][1] as $stack |
                     ( $stack | length ) as $stack_length |
 
-                    # If a list or dictionary closed as empty, add it as value for the previous path
+                    # If a list or dictionary closed as empty, adds it as value for the previous path
                     if $old_stack_length == $stack_length and $old_stack_length < $prev_stack_length and $prev_value == null then (
                         if $last_two[-1] == "array" then (
                             .[0][-1][1] = []
@@ -211,10 +211,10 @@ def bdecode(length_function):
                         .
                     ) end |
 
-                    # Add intermediate paths to continue
+                    # Adds intermediate paths to continue
                     # E.g. if the last element was [[0,"a"],2] and the dictionary ended, add [[0,"a"]]
                     .[0] += [
-                            # Calculate the number of intermediate paths needed
+                            # Calculates the number of intermediate paths needed
                             [
                                 range(
                                     # The previous iteration was the end of another list/dictionary or the start of one
