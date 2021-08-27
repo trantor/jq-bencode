@@ -516,7 +516,7 @@ def bencode(length_function):
                         )
                     ) else (
 # We should never reach this fork
-                        empty
+                        error("This should not happen!")
                     ) end |
 # Increase the key index counter
                     .[1] += 1
@@ -552,7 +552,7 @@ def bencode(length_function):
                         "de"
                     ) else (
 # We should never reach this fork
-                        ""
+                        error("This should not happen!")
                     ) end
                 )
             ) else (
