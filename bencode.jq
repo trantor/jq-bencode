@@ -455,19 +455,19 @@ def bencode(length_function):
 
 # Find the index of the first different element between
 # the paths of the previous and the current stream elements
-        ( $curr_path | common_length($prev_path)) as $comm_indices |
+        ( $curr_path | common_length($prev_path)) as $divergence_index |
 
-        if $prev_path_length > 0 and $comm_indices > 0 and $curr_length == 1 then (
+        if $prev_path_length > 0 and $divergence_index > 0 and $curr_length == 1 then (
 # Add a closing mark (i.e. "e") for each list/dictionary still open once
 # we've reached the base level of the input data
             .[0] += (
                 (
-                    "e" * ( $previous_stack[$comm_indices:] | length )
+                    "e" * ( $previous_stack[$divergence_index:] | length )
                 ) // ""
             )
         ) else (
             if $prev_path_length > 1 then (
-                if $comm_indices + 1 < $prev_path_length  then (
+                if $divergence_index + 1 < $prev_path_length  then (
 # One or more data structures have been closed since the last iteration: adds
 # the appropriate number of markers (i.e. "e") to reflect that
 #
@@ -483,7 +483,7 @@ def bencode(length_function):
 # number of end markers (i.e. "e") we have to add.
                     .[0] += (
                         (
-                            "e" * ( $previous_stack[$comm_indices+1:] | length )
+                            "e" * ( $previous_stack[$divergence_index+1:] | length )
                         ) // ""
                     )
                 ) else (
@@ -494,7 +494,7 @@ def bencode(length_function):
             ) end |
 # Copy the trailing portion of the current path which differs from
 # the one of the previous iteration for further processing
-            .[3] |= $item[0][$comm_indices:] |
+            .[3] |= $item[0][$divergence_index:] |
 
 # Adds any start of dictionary/list marker (i.e. "d" or "l") needed
             .[0] += (
