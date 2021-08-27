@@ -466,11 +466,24 @@ def bencode(length_function):
                 ) // ""
             )
         ) else (
-            if $prev_path_length > 0 then (
-                if $comm_indices < $prev_path_length then (
+            if $prev_path_length > 1 then (
+                if $comm_indices + 1 < $prev_path_length  then (
+# One or more data structures have been closed since the last iteration: adds
+# the appropriate number of markers (i.e. "e") to reflect that
+#
+# Let's take the "bencode" function input to be [ [[[1]]], {"a":{"b":{"c":2}}} ] .
+# With the initial list wrapping, the stream element before the start
+# of the dictionary will be
+# [[0,0,0]]
+# followed by
+# [[0,1,"a","b","c"],2]
+# The index at which the paths diverge is 1, but that's the index of the array key.
+# The same would go for a dictionary.
+# Hence we count the number of elements following the aforementioned index as the
+# number of end markers (i.e. "e") we have to add.
                     .[0] += (
                         (
-                            "e" * ( $previous_stack[$comm_indices:] | length -1  )
+                            "e" * ( $previous_stack[$comm_indices+1:] | length )
                         ) // ""
                     )
                 ) else (
