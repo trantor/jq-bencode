@@ -5,6 +5,11 @@ def log($string):
     $save
 ;
 
+# Function expressing the length of the leading
+# slice of an array/list common to both the input
+# and $b. Which also coincides with the index of
+# the first element which differs between the two
+# lists.
 def common_length($b):
     . as $a |
     ($a|length) as $len_a |
