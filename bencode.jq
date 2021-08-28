@@ -100,9 +100,9 @@ def bdecode(length_function):
         ) end
     ;
 
-# Wrap within a list the input
+# Wraps within a list the input
     "l\(.)e" |
-# Reduce character by character
+# Reduces character by character the input Bencode-d string
     reduce split("")[] as $item (
         # Initial state
         [
