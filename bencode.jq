@@ -113,9 +113,10 @@ def bdecode(length_function):
                 ]
             ],
             # [ previous_stack_of_structures, current_stack_of_structures ]
-            [[],[]]
+            [ [], [] ]
             # Transient array (missing here) for building keys/values/scalars
         ];
+
         #
         # Start of the iterative code
         #
@@ -132,43 +133,43 @@ def bdecode(length_function):
         .[0][-1][1] as $prev_value |
         ( $prev_path | length ) as $prev_path_length |
 
+        if length == 2 then (
         # TL Length == 2 -> No value to process
-        if (length == 2) then (
 
-            # .[0][0][0] == null  -> First run
             if (.[0][0][0] == null) then (
+            # .[0][0][0] == null  -> First run
 
-                # Start of list
                 if $item == "l" then (
+                # Start of list
                     [
                         [
                             [
                                 []
                             ]
                         ],
-                        [[],["array"]]
+                        [ [], ["array"] ]
                     ]
 
-                # Start of dictionary
                 ) elif $item == "d" then (
+                # Start of dictionary
                     [
                         [
                             [
                                 []
                             ]
                         ],
-                        [[],["dictionary"]]
+                        [ [], ["dictionary"] ]
                     ]
 
-                # Start of integer value
                 ) elif $item == "i" then (
+                # Start of integer value
                     [
                         [
                             [
                                 [],0
                             ]
                         ],
-                        [[],[]],
+                        [ [], [] ],
                         [
                             "scalar",
                             "integer",
@@ -176,15 +177,15 @@ def bdecode(length_function):
                         ]
                     ]
 
-                # Start of string value
                 ) else (
+                # Start of string value
                     [
                         [
                             [
                                 [],""
                             ]
                         ],
-                        [[],[]],
+                        [ [], [] ],
                         [
                             "scalar",
                             "string",
@@ -195,18 +196,18 @@ def bdecode(length_function):
                     ]
                 ) end
 
-            # Inbetween values -> Second run onwards
             ) else (
+            # Inbetween values -> Second run onwards
 
-                # End of dictionary or list
                 if $item == "e" then (
+                # End of dictionary or list
                     $stack[-2:] as $last_two |
                     del(.[1][1][-1]) |
                     .[1][1] as $stack |
                     ( $stack | length ) as $stack_length |
 
-                    # If a list or dictionary closed as empty, adds it as value for the previous path
                     if $old_stack_length == $stack_length and $old_stack_length < $prev_stack_length and $prev_value == null then (
+                    # If a list or dictionary closed as empty, adds it as value for the previous path
                         if $last_two[-1] == "array" then (
                             .[0][-1][1] = []
                         ) else (
@@ -220,45 +221,53 @@ def bdecode(length_function):
                     # E.g. if the last element was [[0,"a"],2] and the dictionary ended, add [[0,"a"]]
                     .[0] += [
                             # Calculates the number of intermediate paths needed
-                            [
-                                range(
-                                    # The previous iteration was the end of another list/dictionary or the start of one
-                                    if ( $prev_value == null ) then (
-                                        $prev_path_length - 1
-                                    # The previous element had a scalar leaf value
-                                    ) else (
-                                        $prev_path_length
-                                    ) end;
+                        [
+                            range(
+                                if ( $prev_value == null ) then (
+                                # The previous iteration was the end of another list/dictionary or the start of one
+                                    $prev_path_length - 1
+                                ) else (
+                                # The previous element had a scalar leaf value
+                                    $prev_path_length
+                                ) end;
 
-                                    # E.g. If the last element was [[0,2,"a","b",0],2]
-                                    # the stack would contain ["array","array","dictionary","dictionary","array"]
-                                    # Closing the array would also mean removing the dictionary key from the intermediate paths, hence
-                                    # [[0,2,"a","b",0]],[[0,2,"a","b"]] added at the end of this step
-                                    if (($last_two|IN(["dictionary","array"],["dictionary","dictionary"])) and ($stack_length> 1)) then (
-                                        $stack_length - 2
-                                    # Not "closing" a key-value pair
-                                    ) else (
-                                        $stack_length - 1
-                                    ) end;
 
-                                    -1
-                                )
-                            ] |
-                            # Creates the list of intermediate paths in decreasing length
-                            # by slicing the last element multiple times with decreasing
-                            # ranges provided by the "range" function above.
-                            # If no intermediate paths needs to be added "range" outputs
-                            # an empty list.
-                            map(
-                                [ $prev_path[0:.] ]
-                            )[]
+                                if (
+                                    (
+                                        $last_two |
+                                        IN( ["dictionary","array"], ["dictionary","dictionary"] )
+                                    ) and $stack_length > 1
+                                ) then (
+                                # If the last element was, for instance, [[0,2,"a","b",0],2]
+                                # the stack would contain ["array","array","dictionary","dictionary","array"]
+                                # Closing the trailing array would also mean removing the dictionary key from the intermediate paths, hence
+                                # [[0,2,"a","b",0]],[[0,2,"a","b"]] added at the end of this step
+                                    $stack_length - 2
+                                ) else (
+                                # Not "closing" a key-value pair
+                                    $stack_length - 1
+                                ) end;
+
+
+                                # Negative step
+                                -1
+                            )
+                        ] |
+                        # Creates the list of intermediate paths in decreasing length
+                        # by slicing the last element multiple times with decreasing
+                        # ranges provided by the "range" function above.
+                        # If no intermediate paths needs to be added "range" outputs
+                        # an empty list.
+                        map(
+                            [ $prev_path[0:.] ]
+                        )[]
                     ]
 
-                # Start of dictionary/list/kv-pair/value
                 ) else (
-                    if ($stack[-1] == "array") then (
+                # Start of dictionary/list/KV-pair/value
+                    if $stack[-1] == "array" then (
+                        if $prev_path_length < $stack_length then (
                         # First element of a new array
-                        if ( $prev_path_length ) < ( $stack_length ) then (
                             .[0][-1][0] += [0]
                         # Subsequent elements
                         #) elif ( $prev_path | length ) > ( $stack | length ) then (
@@ -270,15 +279,15 @@ def bdecode(length_function):
                         ) end
                     ) elif ($stack[-1] == "dictionary") then (
                         if ( $prev_path_length ) > ( $stack_length ) then (
-                            .[0] +=  [[
-                                $prev_path[ 0:($stack_length -1) ] +
+                            .[0] += [[
+                                $prev_path[ 0:($stack_length - 1) ] +
                                 [ $prev_path[ -1 ] + 1 ]
                             ]]
                         ) elif ( $prev_path_length ) < ( $stack_length ) then (
                             .
                         ) else (
                             .[0] += [[
-                                $prev_path[ 0:($stack_length -1) ]
+                                $prev_path[ 0:($stack_length - 1) ]
                             ]]
                         ) end
                     ) else (
@@ -299,7 +308,7 @@ def bdecode(length_function):
                                 ""
                             ]]
                     ) else (
-                        if ( $stack[-1] == "dictionary") then (
+                        if $stack[-1] == "dictionary" then (
                             . +=
                                 [[
                                     "key",
@@ -321,13 +330,13 @@ def bdecode(length_function):
                     ) end
                 ) end
             ) end
-# Processing of values after the first character
-        ) elif (length == 3) then (
-# Scalar string
+        ) elif length == 3 then (
+        # Processing of values after the first character
             if .[2][0] == "scalar" and .[2][1] == "string" then (
+            # Scalar string
                 string_process("scalar";$item;length_function)
-# Scalar Integer
             ) elif .[2][0] == "scalar" and .[2][1] == "integer" then (
+            # Scalar integer
                 if $item == "e" then (
                     ( .[2][2] | tonumber ) as $value |
                     .[0][-1][1] |= $value |
@@ -335,8 +344,8 @@ def bdecode(length_function):
                 ) else (
                     .[2][2] |= . + $item
                 ) end
-# KV-pair: key
             ) elif .[2][0] == "key" then (
+            # KV-pair: key
                 if (.[2]|length == 1) then (
                     if $item == "e" then (
                         del(.[1][1][-1]) |
@@ -348,8 +357,8 @@ def bdecode(length_function):
                 ) else (
                     string_process("key";$item;length_function)
                 ) end
-# KV-pair: value
             ) elif .[2][0] == "value" then (
+            # KV-pair: value
                 if (.[2]|length == 1) then (
                     if $item == "i" then (
                         .[2] = [ "value", "integer","" ]
