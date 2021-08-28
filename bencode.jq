@@ -395,6 +395,7 @@ def bencode(length_function):
 # following the string length conventions of "length_function"
     def string_length(length_function):
         reduce split("")[] as $char (
+            # Initial state
             0;
             . + ( $char | length_function )
         ) |
