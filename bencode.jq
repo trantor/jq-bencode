@@ -54,64 +54,69 @@ def bdecode(length_function):
         ) end
     ;
 
-    def string_process($mode;$ichar;length_function):
-        if ( .[2][2] == "length" and (.[2][3]|type == "string")) then (
+    def string_process($ichar;length_function):
+#  $ichar: current character of the Bencode-d input being processed
+#  length_function: the filter matching the character length algorithm used for the Bencode-d string
+#
+#  .[2] ->  [
+#  "standalone" or "key" or "value",
+#  "string",
+#  "length" or "value",
+#  "", Length of the string, filled as a string while .[2][2] is "length", a number afterwards
+#  ""  Actual string contents
+#  ]
+
+        def zero_length_check:
+        # Function checking for strings fully processed and performing actions at that point
+            if .[2][3] == 0 then (
+            # String length at 0: empty string and/or end of the string
+                if .[2][0] == "key" then (
+                # Adds the key to the current path
+                    .[0][-1][0] += [.[2][4]] |
+                # Switches to evaluating the value of the KV-pair
+                    .[2] = [ "value" ]
+                ) else (
+                # KV-pair value or standalone string
+                    # Writing the string as leaf value of the current path
+                    .[0][-1][1] = .[2][4] |
+                    # Deletes the transient work structure: end of string processing
+                    del( .[2] )
+                ) end
+            ) else (
+            # Not the end of the string: proceeds from here
+                .
+            ) end
+        ;
+
+        if .[2][2] == "length" and (.[2][3]|type) == "string" then (
+        # Building the string length from the prefix
             if $ichar == ":" then (
-                .[2][3] |= tonumber
+            # End of prefix length: converts it to a number for later use
+                .[2][3] |= tonumber |
+                zero_length_check
             ) else (
+            # Filling the prefix length
                 .[2][3] |= . + $ichar
-            ) end |
-            if ( .[2][3] == 0 ) then (
-                if $mode != "key" then (
-                        .[0][-1][1] =  .[2][4] |
-                        del( .[2] )
-                ) else (
-                    .[0][-1][0] += [.[2][4]] |
-                    .[2] = [ "value" ]
-                ) end
-            ) else (
-                .
             ) end
-        ) elif ( .[2][2] == "length" and (.[2][3]|type == "number")) then (
-            if ( .[2][3] == 0 ) then (
-                if $mode != "key" then (
-                    .[0][-1][1] =  .[2][4] |
-                    del( .[2] )
-                ) else (
-                    .
-                ) end
-            ) else (
-                .[2][2] |= "value" |
-                .[2][3] |= . - ( $ichar | length_function ) |
-                .[2][4] |= . + $ichar
-            ) end |
-            if ( .[2][3] == 0 ) then (
-                if $mode != "key" then (
-                    .[0][-1][1] =  .[2][4] |
-                    del( .[2] )
-                ) else (
-                    .[0][-1][0] += [.[2][4]] |
-                    .[2] = [ "value" ]
-                ) end
-            ) else (
-            .
-            ) end
-        ) elif ( .[2][2] == "value" and .[2][3] != 0 ) then (
-                .[2][3] |= . - ( $ichar | length_function ) |
-                .[2][4] |= . + $ichar |
-                if ( .[2][3] == 0 ) then (
-                    if $mode != "key" then (
-                        .[0][-1][1] =  .[2][4] |
-                        del( .[2] )
-                    ) else (
-                        .[0][-1][0] += [.[2][4]] |
-                        .[2] = [ "value" ]
-                    ) end
-                ) else (
-                .
-                ) end
+        ) elif .[2][2] == "length" and (.[2][3]|type) == "number" then (
+        # Prefix length evaluation ended: first character of the actual contents
+            # Value mode
+            .[2][2] |= "value" |
+            # Decreases the string length by the current character's length according
+            # to length_function
+            .[2][3] |= . - ( $ichar | length_function ) |
+            # Appends $ichar to the output string
+            .[2][4] |= . + $ichar |
+            zero_length_check
+        ) elif .[2][2] == "value" and .[2][3] != 0 then (
+            # Decreases the string length by the current character's length according
+            # to length_function
+            .[2][3] |= . - ( $ichar | length_function ) |
+            # Appends $ichar to the output string
+            .[2][4] |= . + $ichar |
+            zero_length_check
         ) else (
-            .
+            error("This shouldn't be possible!")
         ) end
     ;
 
@@ -349,7 +354,7 @@ def bdecode(length_function):
         # Processing of values after the first character
             if .[2][0] == "standalone" and .[2][1] == "string" then (
             # Standalone string
-                string_process("standalone";$item;length_function)
+                string_process($item;length_function)
             ) elif .[2][0] == "standalone" and .[2][1] == "integer" then (
             # Standalone integer
                 integer_process($item)
@@ -364,7 +369,7 @@ def bdecode(length_function):
                         .[2] = [ "key", "string","length",$item,"" ]
                     ) end
                 ) else (
-                    string_process("key";$item;length_function)
+                    string_process($item;length_function)
                 ) end
             ) elif .[2][0] == "value" then (
             # KV-pair: value
@@ -382,7 +387,7 @@ def bdecode(length_function):
                     ) end
                 ) else (
                     if .[2][0] == "value" and .[2][1] == "string" then (
-                        string_process("value";$item;length_function)
+                        string_process($item;length_function)
                     ) elif .[2][0] == "value" and .[2][1] == "integer" then (
                     # Integer value: processing
                         integer_process($item)
