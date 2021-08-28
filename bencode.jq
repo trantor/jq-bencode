@@ -5,21 +5,6 @@ def _log($string):
     $save
 ;
 
-# Function expressing the length of the leading
-# slice of an array/list common to both the input
-# and $b. Which also coincides with the index of
-# the first element which differs between the two
-# lists.
-def common_length($b):
-    . as $a |
-    ($a|length) as $len_a |
-    ($b|length) as $len_b |
-    ([$len_a,$len_b] | min ) as $min |
-    [ range(0;$min;1) ] |
-    map($a[.] == $b[.]) |
-    index(false) // $min
-;
-
 # Outputs the input character length as the length of its UTF-8-encoded version in bytes
 def bytecharlength:
     utf8bytelength
@@ -443,6 +428,21 @@ def bdecode(length_function):
 # JSON to Bencode encoder
 # The argument is a function returning the "length" of a character
 def bencode(length_function):
+
+# Function expressing the length of the leading
+# slice of an array/list common to both the input
+# and $b. Which also coincides with the index of
+# the first element which differs between the two
+# lists.
+    def common_length($b):
+        . as $a |
+        ($a|length) as $len_a |
+        ($b|length) as $len_b |
+        ([$len_a,$len_b] | min ) as $min |
+        [ range(0;$min;1) ] |
+        map($a[.] == $b[.]) |
+        index(false) // $min
+    ;
 
 # Function computing the length of its string argument
 # following the string length conventions of "length_function"
