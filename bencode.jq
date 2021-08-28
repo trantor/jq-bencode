@@ -114,7 +114,7 @@ def bdecode(length_function):
             ],
             # [ previous_stack_of_structures, current_stack_of_structures ]
             [ [], [] ]
-            # Transient array (missing here) for building keys/values/scalars
+            # Transient array (missing here) for building keys/values/standalones
         ];
 
         #
@@ -171,7 +171,7 @@ def bdecode(length_function):
                         ],
                         [ [], [] ],
                         [
-                            "scalar",
+                            "standalone",
                             "integer",
                             ""
                         ]
@@ -187,7 +187,7 @@ def bdecode(length_function):
                         ],
                         [ [], [] ],
                         [
-                            "scalar",
+                            "standalone",
                             "string",
                             "length",
                             $item,
@@ -227,7 +227,7 @@ def bdecode(length_function):
                                 # The previous iteration was the end of another list/dictionary or the start of one
                                     $prev_path_length - 1
                                 ) else (
-                                # The previous element had a scalar leaf value
+                                # The previous element had a standalone leaf value
                                     $prev_path_length
                                 ) end;
 
@@ -303,7 +303,7 @@ def bdecode(length_function):
                     ) elif $item == "i" then (
                         . +=
                             [[
-                                "scalar",
+                                "standalone",
                                 "integer",
                                 ""
                             ]]
@@ -320,7 +320,7 @@ def bdecode(length_function):
                         ) else (
                             . +=
                                 [[
-                                    "scalar",
+                                    "standalone",
                                     "string",
                                     "length",
                                     $item,
@@ -332,11 +332,11 @@ def bdecode(length_function):
             ) end
         ) elif length == 3 then (
         # Processing of values after the first character
-            if .[2][0] == "scalar" and .[2][1] == "string" then (
-            # Scalar string
-                string_process("scalar";$item;length_function)
-            ) elif .[2][0] == "scalar" and .[2][1] == "integer" then (
-            # Scalar integer
+            if .[2][0] == "standalone" and .[2][1] == "string" then (
+            # Standalone string
+                string_process("standalone";$item;length_function)
+            ) elif .[2][0] == "standalone" and .[2][1] == "integer" then (
+            # Standalone integer
                 if $item == "e" then (
                     ( .[2][2] | tonumber ) as $value |
                     .[0][-1][1] |= $value |
