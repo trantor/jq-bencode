@@ -1,4 +1,4 @@
-def log($string):
+def _log($string):
     . as $save |
     $string |
     debug |
