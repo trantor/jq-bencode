@@ -36,6 +36,12 @@ String length as the count of UTF-16 code units needed to encode the string. Eac
 `u16strbencode/0`: JSON to Bencode conversion  
 `u16strbdecode/0`: Bencode to JSON conversion
 
+## Implementation notes
+
+The actual implementation of the encoder/decoder relies on `jq`'s [streaming parsing](https://stedolan.github.io/jq/manual/#Streaming), which turns a data structure into a list of path expressions, some of them with leaf values, some of them not.
+The internal `_bencode` function takes a streaming form of the JSON input and through `reduce` processes it generating the Bencode-d output.
+The internal `_bdecode` function instead processes the Bencode-d string character by character through `reduce`, generating a streaming JSON form which is converted to a JSON data structure via `fromstream` at the end.
+
 ## Examples
 
 After copying `bencode.jq` in one of the directories of the `jq` modules search path (see `jq`'s documentation) or using `jq`'s `-L` option to reference the directory containing the module file:
