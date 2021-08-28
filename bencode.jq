@@ -230,8 +230,10 @@ def bdecode(length_function):
                     # If a list or dictionary closed as empty, adds it as value for the previous path
                         if $last_two[-1] == "array" then (
                             .[0][-1][1] = []
-                        ) else (
+                        ) elif $last_two[-1] == "dictionary" then (
                             .[0][-1][1] = {}
+                        ) else (
+                            error("This shouldn't be possible!")
                         ) end
                     ) else (
                         .
@@ -289,30 +291,32 @@ def bdecode(length_function):
                         if $prev_path_length < $stack_length then (
                         # First element of a new array
                             .[0][-1][0] += [0]
+                        ) elif $prev_path_length == $stack_length then (
                         # Subsequent elements
-                        #) elif ( $prev_path | length ) > ( $stack | length ) then (
-                        ) else (
-                                .[0] +=  [[
-                                    $prev_path[ 0:($stack_length -1) ] +
-                                    [ $prev_path[ -1 ] + 1 ]
-                                ]]
-                        ) end
-                    ) elif ($stack[-1] == "dictionary") then (
-                        if ( $prev_path_length ) > ( $stack_length ) then (
                             .[0] += [[
                                 $prev_path[ 0:($stack_length - 1) ] +
                                 [ $prev_path[ -1 ] + 1 ]
                             ]]
-                        ) elif ( $prev_path_length ) < ( $stack_length ) then (
-                            .
                         ) else (
+                            error("This shouldn't be possible!")
+                        ) end
+                    ) elif $stack[-1] == "dictionary" then (
+                        if $prev_path_length == $stack_length then (
+                        # "Closes" the KV-pair and possibly the dictionary if it's the last KV-pair
                             .[0] += [[
                                 $prev_path[ 0:($stack_length - 1) ]
                             ]]
+                        ) elif $prev_path_length < $stack_length then (
+                        # A new KV-pair opened: nothing to do
+                            .
+                        ) else (
+                            error("This shouldn't be possible!")
                         ) end
                     ) else (
-                        .
+                        error("This shouldn't be possible!")
                     ) end |
+
+
                     if $item == "l" then (
                         .[1][-1] += ["array"]
                     ) elif $item == "d" then (
@@ -386,20 +390,22 @@ def bdecode(length_function):
                         .[2] = [ "value", "string","length",$item,"" ]
                     ) end
                 ) else (
-                    if .[2][0] == "value" and .[2][1] == "string" then (
-                        string_process($item;length_function)
-                    ) elif .[2][0] == "value" and .[2][1] == "integer" then (
+                # Processing from the second character of integer/string values onwards
+                    if .[2][0] == "value" and .[2][1] == "integer" then (
                     # Integer value: processing
                         integer_process($item)
+                    ) elif .[2][0] == "value" and .[2][1] == "string" then (
+                    # String value: processing
+                        string_process($item;length_function)
                     ) else (
-                        .
+                        error("This shouldn't be possible!")
                     ) end
                 ) end
             ) else (
-                .
+                error("This shouldn't be possible!")
             ) end
         ) else (
-            .
+            error("This shouldn't be possible!")
         ) end |
         if .[1][1] | length > 0 then (
             .[1][0] = $prev_stack
