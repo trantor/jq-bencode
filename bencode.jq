@@ -222,6 +222,8 @@ def bdecode(length_function):
                 if $item == "e" then (
                 # End of dictionary or list
                     $stack[-2:] as $last_two |
+
+                    # Removes the last element (array/dictionary) we are closing from the stack
                     del(.[1][1][-1]) |
                     .[1][1] as $stack |
                     ( $stack | length ) as $stack_length |
@@ -318,13 +320,17 @@ def bdecode(length_function):
 
 
                     if $item == "l" then (
+                    # Starting a list/array: adds that to the stack
                         .[1][-1] += ["array"]
                     ) elif $item == "d" then (
+                    # Starting a dictionary: adds that to the stack
                         .[1][-1] += ["dictionary"] |
+                    # Starting a dictionary: goes into key processing of the KV-pair
                         .[2] =  [
                                 "key"
                                 ]
                     ) elif $item == "i" then (
+                    # Start of an integer standalone value
                         . +=
                             [[
                                 "standalone",
@@ -333,6 +339,7 @@ def bdecode(length_function):
                             ]]
                     ) else (
                         if $stack[-1] == "dictionary" then (
+                        # Starts processing the prefix length of the key of a KV-pair
                             . +=
                                 [[
                                     "key",
@@ -342,6 +349,7 @@ def bdecode(length_function):
                                     ""
                                 ]]
                         ) else (
+                        # Starts processing the prefix length of a standalone string value
                             . +=
                                 [[
                                     "standalone",
@@ -365,28 +373,41 @@ def bdecode(length_function):
             ) elif .[2][0] == "key" then (
             # KV-pair: key
                 if (.[2]|length == 1) then (
+                # Starting processing the first character of the key
                     if $item == "e" then (
+                    # Empty dictionary: writing it as leaf value of the current path
                         del(.[1][1][-1]) |
                         .[0][-1][1] = {} |
+                    # Deletes the transient work structure
                         del(.[2])
                     ) else (
+                    # Transient ds with the first character of the prefix key length
                         .[2] = [ "key", "string","length",$item,"" ]
                     ) end
                 ) else (
+                # Processing from the second character of the prefix length of the key
+                # to the end of the actual key
                     string_process($item;length_function)
                 ) end
             ) elif .[2][0] == "value" then (
             # KV-pair: value
                 if (.[2]|length == 1) then (
+                # Processing the first character of the value part of a KV-pair
                     if $item == "i" then (
+                    # Integer value: transient ds for the processing of the value
                         .[2] = [ "value", "integer","" ]
                     ) elif $item == "l" then (
+                    # Nested array/list
                         .[1][1] += ["array"] |
+                        # Deleting the transient ds to leave the value processing phase
                         del(.[2])
                     ) elif $item == "d" then (
+                    # Nested dictionary
                         .[1][1] += ["dictionary"] |
+                        # Deleting the transient ds to leave the value processing phase
                         del(.[2])
                     ) else (
+                    # String value: transient ds with the first character of the prefix value length
                         .[2] = [ "value", "string","length",$item,"" ]
                     ) end
                 ) else (
@@ -408,11 +429,14 @@ def bdecode(length_function):
             error("This shouldn't be possible!")
         ) end |
         if .[1][1] | length > 0 then (
+        # Saves the "previous" stack for the next iteration
             .[1][0] = $prev_stack
         ) else (
+        # Unless we've finished processing the input
             .
         ) end
     ) |
+    # Converts the stream representation into a JSON DS, removing the initial list wrapping
     fromstream(.[0][])[]
 ;
 
