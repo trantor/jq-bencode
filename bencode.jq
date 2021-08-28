@@ -39,6 +39,21 @@ def u16charlength:
 # The argument is a function returning the "length" of a character
 def bdecode(length_function):
 
+    def integer_process($ichar):
+#  $ichar: current character of the Bencode-d input being processed
+        if $ichar == "e" then (
+        # End of the integer string representation: converts it to an actual integer
+            ( .[2][2] | tonumber ) as $value |
+            # Adds the leaf value to the current path
+            .[0][-1][1] |= $value |
+            # Deletes the transient work structure
+            del( .[2] )
+        ) else (
+        # Builds the string representation of the integer value
+            .[2][2] |= . + $ichar
+        ) end
+    ;
+
     def string_process($mode;$ichar;length_function):
         if ( .[2][2] == "length" and (.[2][3]|type == "string")) then (
             if $ichar == ":" then (
@@ -337,13 +352,7 @@ def bdecode(length_function):
                 string_process("standalone";$item;length_function)
             ) elif .[2][0] == "standalone" and .[2][1] == "integer" then (
             # Standalone integer
-                if $item == "e" then (
-                    ( .[2][2] | tonumber ) as $value |
-                    .[0][-1][1] |= $value |
-                    del( .[2] )
-                ) else (
-                    .[2][2] |= . + $item
-                ) end
+                integer_process($item)
             ) elif .[2][0] == "key" then (
             # KV-pair: key
                 if (.[2]|length == 1) then (
@@ -375,13 +384,8 @@ def bdecode(length_function):
                     if .[2][0] == "value" and .[2][1] == "string" then (
                         string_process("value";$item;length_function)
                     ) elif .[2][0] == "value" and .[2][1] == "integer" then (
-                        if $item == "e" then (
-                            ( .[2][2] | tonumber ) as $value |
-                            .[0][-1][1] |= $value |
-                            del( .[2] )
-                        ) else (
-                            .[2][2] |= . + $item
-                        ) end
+                    # Integer value: processing
+                        integer_process($item)
                     ) else (
                         .
                     ) end
