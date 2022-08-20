@@ -422,7 +422,7 @@ def _bdecode(length_function):
         ) end
     ) |
     # Converts the stream representation into a JSON DS, removing the initial list wrapping
-    fromstream(.[0][])[]
+    fromstream(.[0][0:-1][])[]
 ;
 
 # JSON to Bencode encoder
